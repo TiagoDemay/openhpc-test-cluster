@@ -20,4 +20,3 @@ Vagrant.configure("2") do |config|
       sms.vm.provision "shell", inline: "setenforce 0", run: "always"
       sms.vm.provision "shell", inline: "hostname sms.localdomain", run: "always"
     end
-

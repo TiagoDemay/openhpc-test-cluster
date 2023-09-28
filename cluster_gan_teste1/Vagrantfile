@@ -1,0 +1,119 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos/7"
+  config.vm.box_version = "1902.01"
+  config.vm.network "public_network", bridge: "wlp60s0"
+  
+  config.vm.define "sms", primary: true do |sms|
+    sms.vm.provider "virtualbox" do |vboxsms|
+      vboxsms.memory = 2048
+      vboxsms.cpus = 2
+    end
+
+    sms.vm.network "private_network",
+                   ip: "192.168.7.2",
+                   virtualbox__intnet: "provisioning"
+    
+    sms.vm.provision "shell", inline: "echo sms.localdomain > /etc/hostname"
+    sms.vm.provision "shell", inline: "echo 192.168.7.2 sms sms.localdomain >> /etc/hosts"
+    sms.vm.provision "shell", inline: "yum -y install http://build.openhpc.community/OpenHPC:/1.3/CentOS_7/x86_64/ohpc-release-1.3-1.el7.x86_64.rpm"
+    sms.vm.provision "shell", inline: "yum -y groupinstall 'Development Tools'"
+    sms.vm.provision "shell", inline: "yum -y install docs-ohpc vim"
+    sms.vm.provision "shell", inline: "/vagrant/recipe.sh"
+    sms.vm.provision "shell", inline: "setenforce 0", run: "always"
+    sms.vm.provision "shell", inline: "hostname sms.localdomain", run: "always"
+  end
+
+  config.vm.provision "shell" do |s|
+    ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+    s.inline = "echo $1 >> /home/vagrant/.ssh/authorized_keys"
+    s.args = [ssh_pub_key]
+  end
+end
+    config.vm.define "c1", autostart: false do |c1|
+      c1.vm.provider "virtualbox" do |vboxc1|
+        vboxc1.memory = 2048
+        vboxc1.cpus = 1
+        # Enable if you need to debug PXE.
+        #vboxc1.gui = 'true'
+        vboxc1.customize [
+          'modifyvm', :id,
+          '--nic1', 'intnet',
+          '--intnet1', 'provisioning',
+          '--boot1', 'dvd',
+          '--boot2', 'none',
+          '--boot3', 'none',
+          '--boot4', 'none',
+          '--macaddress1', '221a2b000000'
+        ]
+
+        vboxc1.customize [
+          "storageattach", :id,
+          "--storagectl", "IDE",
+          "--port", "0",
+          "--device", "0",
+          "--type", "dvddrive",
+          "--medium", "ipxe.iso"
+        ]
+      end
+      c1.vm.boot_timeout = 10
+    end
+    config.vm.define "c2", autostart: false do |c2|
+      c2.vm.provider "virtualbox" do |vboxc2|
+        vboxc2.memory = 2048
+        vboxc2.cpus = 1
+        # Enable if you need to debug PXE.
+        #vboxc2.gui = 'true'
+        vboxc2.customize [
+          'modifyvm', :id,
+          '--nic1', 'intnet',
+          '--intnet1', 'provisioning',
+          '--boot1', 'dvd',
+          '--boot2', 'none',
+          '--boot3', 'none',
+          '--boot4', 'none',
+          '--macaddress1', '221a2b000011'
+        ]
+
+        vboxc2.customize [
+          "storageattach", :id,
+          "--storagectl", "IDE",
+          "--port", "0",
+          "--device", "0",
+          "--type", "dvddrive",
+          "--medium", "ipxe.iso"
+        ]
+      end
+      c2.vm.boot_timeout = 10
+    end
+    config.vm.define "c3", autostart: false do |c3|
+      c3.vm.provider "virtualbox" do |vboxc3|
+        vboxc3.memory = 2048
+        vboxc3.cpus = 1
+        # Enable if you need to debug PXE.
+        #vboxc3.gui = 'true'
+        vboxc3.customize [
+          'modifyvm', :id,
+          '--nic1', 'intnet',
+          '--intnet1', 'provisioning',
+          '--boot1', 'dvd',
+          '--boot2', 'none',
+          '--boot3', 'none',
+          '--boot4', 'none',
+          '--macaddress1', '221a2b000022'
+        ]
+
+        vboxc3.customize [
+          "storageattach", :id,
+          "--storagectl", "IDE",
+          "--port", "0",
+          "--device", "0",
+          "--type", "dvddrive",
+          "--medium", "ipxe.iso"
+        ]
+      end
+      c3.vm.boot_timeout = 10
+    end
+
+end
+
+# vi: set ft=ruby :
