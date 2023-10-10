@@ -1,22 +1,34 @@
 Vagrant.configure("2") do |config|
-    config.vm.box = "centos/7"
-    config.vm.box_version = "1902.01"
-
-    config.vm.define "sms", primary: true do |sms|
-      sms.vm.provider "virtualbox" do |vboxsms|
-        vboxsms.memory = 2048
-        vboxsms.cpus = 2
-      end
-      sms.vm.network "private_network",
-                     ip: "192.168.7.2",
-                     virtualbox__intnet: "provisioning"
-      sms.vm.provision "shell", inline: "echo sms.localdomain > /etc/hostname"
-      sms.vm.provision "shell", inline: "echo 192.168.7.2 sms sms.localdomain >> /etc/hosts"
-      sms.vm.provision "shell", inline: "yum -y install http://build.openhpc.community/OpenHPC:/1.3/CentOS_7/x86_64/ohpc-release-1.3-1.el7.x86_64.rpm"
-      sms.vm.provision "shell", inline: "yum -y groupinstall 'Development Tools'"
-      sms.vm.provision "shell", inline: "yum -y install docs-ohpc vim"
-      sms.vm.provision "shell", inline: "/vagrant/recipe.sh"
-      # Disable SELINUX.
-      sms.vm.provision "shell", inline: "setenforce 0", run: "always"
-      sms.vm.provision "shell", inline: "hostname sms.localdomain", run: "always"
+  config.vm.box = "centos/7"
+  config.vm.box_version = "1902.01"
+  config.vm.network "public_network", bridge: "wlp60s0"
+  
+  config.vm.define "sms", primary: true do |sms|
+    sms.vm.provider "virtualbox" do |vboxsms|
+      vboxsms.memory = 2048
+      vboxsms.cpus = 2
     end
+
+    sms.vm.network "private_network",
+                   ip: "192.168.7.2",
+                   virtualbox__intnet: "provisioning"
+    r = Random.new
+    ssh_port = r.rand(1000...5000)
+    sms.vm.network "forwarded_port", guest: 22, host: "#{ssh_port}", id: 'ssh', auto_correct: true
+
+    sms.vm.provision "shell", inline: "echo sms.localdomain > /etc/hostname"
+    sms.vm.provision "shell", inline: "echo 192.168.7.2 sms sms.localdomain >> /etc/hosts"
+    sms.vm.provision "shell", inline: "yum -y install http://build.openhpc.community/OpenHPC:/1.3/CentOS_7/x86_64/ohpc-release-1.3-1.el7.x86_64.rpm"
+    sms.vm.provision "shell", inline: "yum -y groupinstall 'Development Tools'"
+    sms.vm.provision "shell", inline: "yum -y install docs-ohpc vim"
+    sms.vm.provision "shell", inline: "/vagrant/recipe.sh"
+    sms.vm.provision "shell", inline: "setenforce 0", run: "always"
+    sms.vm.provision "shell", inline: "hostname sms.localdomain", run: "always"
+  end
+
+  config.vm.provision "shell" do |s|
+    ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+    s.inline = "echo $1 >> /home/vagrant/.ssh/authorized_keys"
+    s.args = [ssh_pub_key]
+  end
+end
